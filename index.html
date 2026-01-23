@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Adivinhe Marvel</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Anton&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+
+<style>
+  body {
+    margin: 0;
+    font-family: 'Roboto', sans-serif;
+    background-image: radial-gradient(circle at 20% 20%, rgba(15,15,18,0.85), rgba(5,5,8,0.85) 60%), url('images.jpg');
+    background-size: auto, cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    color: #fff;
+  }
+  .box {
+    max-width: 680px;
+    margin: 40px auto;
+    background: rgba(20,20,24,0.85);
+    border: 1px solid #2a2a2f;
+    border-radius: 14px;
+    padding: 24px 20px 28px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    position: relative;
+    text-align: center;
+  }
+  h1 {
+    font-family: 'Anton', sans-serif;
+    letter-spacing: 0.5px;
+    margin: 0 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  #titulo-icone {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    mix-blend-mode: multiply;
+  }
+  #progresso {
+    width: 100%;
+    height: 10px;
+    background: #333;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 10px 0 16px;
+  }
+  #progresso-inner {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #e62429, #ff6b6b);
+    transition: width 0.25s ease;
+  }
+  button {
+    padding: 12px 18px;
+    font-size: 16px;
+    background: #444;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    margin: 6px 8px;
+  }
+  button.sim { background:#1fa84e; }
+  button.nao { background:#a81f2c; }
+  button.talvez { background:#f0ad4e; color:#1b1b1b; }
+  #nao-sei { background:#777; }
+  #voltar { background:#555; }
+  #personagem-img {
+    margin-top: 16px;
+    max-width: 240px;
+    border-radius: 10px;
+    border: 2px solid #2a2a2f;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+  }
+  #resultado {
+    margin-top: 18px;
+    font-size: 1.05em;
+  }
+</style>
+</head>
+
+<body>
+
+<div class="box">
+<!-- Botão reiniciar no canto superior direito -->
+<button id="reiniciar" style="
+    position:absolute;
+    top:15px;
+    right:15px;
+    padding:8px 12px;
+    font-size:14px;
+    background:#e62429;
+    color:white;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+">Reiniciar</button>
+
+<h1>
+  <picture>
+    <source srcset="11381393.png" type="image/png">
+    <img id="titulo-icone" src="11381393.jpg" alt="Ícone">
+  </picture>
+  Adivinhe Marvel
+</h1>
+
+<p style="font-size:1.2em; color:#fff; margin-top:-10px; margin-bottom:20px; text-shadow:1px 1px #000;">
+  Pense em um personagem da Marvel. Eu vou adivinhar.
+</p>
+
+<div id="progresso">
+  <div id="progresso-inner"></div>
+</div>
+
+<p id="pergunta">Carregando perguntas...</p>
+
+<!-- Botões de respostas + botão voltar -->
+<div style="display:flex; justify-content:center; flex-wrap:wrap;">
+  <button id="sim" class="sim">SIM</button>
+  <button id="talvez" class="talvez">TALVEZ</button>
+  <button id="nao" class="nao">NÃO</button>
+  <button id="nao-sei">NÃO SEI</button>
+  <button id="voltar" style="background:#555;color:white;">Voltar</button>
+</div>
+
+<div id="resultado"></div>
+<img id="personagem-img" src="" alt="" style="display:none;">
+</div>
+
+<script>
+/* ===== PERSONAGENS COM IMAGENS ===== */
+const personagens = [
+  {nome:"Homem de Ferro", tags:["heroi","humano","terra","marvel","inteligente","rico","armadura","voo","armas","lider","vingador","traje-tech","tecnologia","laser","branco","famoso","identidade-publica"]},
+  {nome:"Pantera Negra", tags:["heroi","humano","terra","marvel","lider","realeza","wakanda","garras","agilidade","forca","tecnologia","traje-tech","vibranium","negro","vingador","identidade-publica","artes-marciais"]},
+  {nome:"Capitão América", tags:["heroi","humano","terra","marvel","forca","agilidade","lider","combate","armas","equipe-fixa","simbolo","uniforme","lider-equipe","trauma","moral","identidade-publica","arma-signature","estratega","sobrevive-extremo","escudo","bandeira-eua","branco","super-soldado","congelado","vingador","shield"]},
+  {nome:"Thor", tags:["heroi","asgardiano","cosmico","marvel","forca","agilidade","voo-natural","divino","lider","armas","martelo","arma-signature","mitologia","marca","sobrevive-extremo","realeza","capa","branco","vingador","eletricidade"]},
+  {nome:"Hulk", tags:["heroi","humano","terra","marvel","forca","regeneracao","imortal","trauma","fusão","instavel","sobrevive-extremo","velocidade","inteligente","animal-monstro","pele-verde","branco","vingador","dupla-personalidade"]},
+  {nome:"Viúva Negra", tags:["heroi","humano","terra","marvel","combate","armas","artes-marciais","agilidade","inteligente","estratega","equipe-fixa","trauma","espionagem","identidade-publica","juntou-viloes","branco","cabelo-ruivo","vingador","shield","armas-fogo"]},
+  {nome:"Gavião Arqueiro", tags:["heroi","humano","terra","marvel","combate","armas","agilidade","equipe-fixa","trauma","identidade-publica","estratega","luta-signature","arco","branco","vingador","shield"]},
+  {nome:"Visão", tags:["heroi","synthetic","terra","marvel","voo","energia","telepatia","equipe-fixa","simbolo","traje-tech","inteligente","sobrevive-extremo","marca","arma-signature","capa","pele-vermelha","vingador","intangivel"]},
+  {nome:"Wanda Maximoff", tags:["heroi","humano","terra","marvel","magia","telepatia","energia","trauma","equipe-fixa","precognicao","ilusao","sobrevive-extremo","identidade-publica","emocional","branco","cabelo-ruivo","vingador"]},
+  {nome:"Hank Pym", tags:["heroi","humano","terra","marvel","inteligente","estratega","ciencia","armas","arma-signature","marca","identidade-publica","mentor","sobrevive-extremo","branco","tamanho","vingador"]},
+  {nome:"Wasp (Janet van Dyne)", tags:["heroi","humano","terra","marvel","voo-natural","agilidade","combate","armas","equipe-fixa","simbolo","traje-tech","inteligente","identidade-publica","arma-signature","branco","tamanho","vingador","asas"]},
+  {nome:"Quicksilver", tags:["heroi","mutante","terra","marvel","velocidade","forca","combate","trauma","equipe-fixa","identidade-publica","fraqueza","estratega","branco","cabelo-branco","vingador"]},
+  {nome:"Scarlet Witch", tags:["heroi","humano","terra","marvel","magia","telepatia","energia","trauma","precognicao","ilusao","equipe-fixa","emocional","sobrevive-extremo","identidade-publica","artefatos","branco","cabelo-ruivo","vingador"]},
+  {nome:"Winter Soldier", tags:["antiheroi","humano","terra","marvel","combate","armas","agilidade","trauma","equipe-fixa","identidade-publica","cibernetico","estratega","arma-signature","braco-metal","branco","super-soldado","congelado","vingador","armas-fogo","hydra"]},
+  {nome:"Hawkeye (Kate Bishop)", tags:["heroi","humano","terra","marvel","combate","armas","agilidade","equipe-fixa","trauma","identidade-publica","arma-signature","estratega","luta-signature","jovem","arco","branco"]},
+  {nome:"Ms. Marvel (Kamala Khan)", tags:["heroi","humano","terra","marvel","metamorfo","agilidade","trauma","equipe-fixa","jovem","identidade-publica","emocional","sobrevive-extremo","esticar"]},
+  {nome:"Shuri", tags:["heroi","humano","terra","marvel","inteligente","estratega","ciencia","armas","equipe-fixa","marca","identidade-publica","arma-signature","realeza","negro","wakanda"]},
+  {nome:"Okoye", tags:["heroi","humano","terra","marvel","combate","armas","agilidade","equipe-fixa","trauma","estratega","identidade-publica","luta-signature","negro","careca","wakanda"]},
+  {nome:"Beta Ray Bill", tags:["heroi","alien","cosmico","marvel","forca","voo-natural","armas","arma-signature","divino","sobrevive-extremo","marca","martelo"]},
+  {nome:"Kingpin", tags:["vilao","humano","terra","marvel","forca","inteligente","estratega","arrogante","vingativo","trauma","armas","equipe-fixa","identidade-publica","liga-vilao","careca","branco"]},
+  {nome:"Red Skull", tags:["vilao","humano","terra","marvel","inteligente","estratega","arrogante","vingativo","trauma","armas","liga-vilao","marca","identidade-publica","pele-vermelha","careca","super-soldado","simbolo-caveira","hydra","armas-fogo"]},
+  {nome:"Baron Zemo", tags:["vilao","humano","terra","marvel","inteligente","estratega","arrogante","trauma","armas","liga-vilao","identidade-publica","branco","hydra"]},
+  {nome:"Venom", tags:["antiheroi","humano","terra","marvel","forca","regeneracao","metamorfo","fusão","animal-monstro","trauma","sobrevive-extremo","arma-signature","simbionte","tentaculos"]},
+  {nome:"Carnage", tags:["vilao","humano","terra","marvel","forca","regeneracao","metamorfo","fusão","animal-monstro","trauma","sobrevive-extremo","simbionte","tentaculos"]},
+  {nome:"Mysterio", tags:["vilao","humano","terra","marvel","magia","ilusao","estratega","inteligente","arma-signature","marca","juntou-viloes","aranhaverso","capa","branco"]},
+  {nome:"Electro", tags:["vilao","humano","terra","marvel","eletricidade","agilidade","trauma","armas","marca","liga-vilao","aranhaverso"]},
+  {nome:"Sandman", tags:["vilao","humano","terra","marvel","metamorfo","forca","trauma","sobrevive-extremo","arma-signature","liga-vilao","aranhaverso","branco","tamanho"]},
+  {nome:"Nova (Sam Alexander)", tags:["heroi","humano","terra","marvel","forca","voo-natural","energia","trauma","equipe-fixa","marca","identidade-publica","vingador"]},
+  {nome:"Adam Warlock", tags:["heroi","cosmico","marvel","forca","energia","voo-natural","divino","precognicao","arma-signature","marca","guardioes"]},
+  {nome:"Silver Surfer", tags:["heroi","cosmico","marvel","forca","energia","voo-natural","marca","arma-signature","sobrevive-extremo","prancha"]},
+  {nome:"Doctor Strange", tags:["heroi","humano","terra","marvel","magia","telepatia","energia","precognicao","ilusao","equipe-fixa","estratega","marca","arma-signature","inteligente","branco","vingador","tempo","defensores"]},
+  {nome:"Baron Mordo", tags:["vilao","humano","terra","marvel","magia","estratega","arma-signature","marca","juntou-viloes"]},
+  {nome:"Wong", tags:["heroi","humano","terra","marvel","magia","precognicao","estratega","marca","equipe-fixa","vingador"]},
+  {nome:"Christine Palmer", tags:["heroi","humano","terra","marvel","identidade-publica","inteligente","estratega","trauma","branco"]},
+  {nome:"Homem-Aranha", tags:["heroi","humano","terra","marvel","agilidade","forca","luta-signature","equipe-fixa","simbolo","traje-tech","marca","arma-signature","identidade-publica","jovem","sobrevive-extremo","teia","aranhaverso","inteligente","humor","branco","vingador"]},
+  {nome:"Miles Morales", tags:["heroi","humano","terra","marvel","agilidade","forca","metamorfo","luta-signature","marca","identidade-publica","jovem","equipe-fixa","teia","aranhaverso","negro","invisivel","eletricidade"]},
+  {nome:"Demolidor", tags:["heroi","humano","terra","marvel","agilidade","combate","artes-marciais","trauma","arma-signature","marca","identidade-publica","cego","branco","defensores","chifres","advogado"]},
+  {nome:"Justiceiro", tags:["antiheroi","humano","terra","marvel","combate","armas","trauma","estratega","identidade-publica","luta-signature","branco","simbolo-caveira","armas-fogo","mercenario"]},
+  {nome:"Jessica Jones", tags:["heroi","humano","terra","marvel","forca","trauma","identidade-publica","sobrevive-extremo","branco","defensores"]},
+  {nome:"Luke Cage", tags:["heroi","humano","terra","marvel","forca","regeneracao","trauma","equipe-fixa","identidade-publica","sobrevive-extremo","negro","careca","defensores"]},
+  {nome:"Punho de Ferro", tags:["heroi","humano","terra","marvel","combate","agilidade","artes-marciais","trauma","equipe-fixa","identidade-publica","branco","defensores"]},
+  {nome:"Wolverine", tags:["antiheroi","mutante","terra","marvel","forca","regeneracao","trauma","combate","armas","clones","sobrevive-extremo","equipe-fixa","identidade-publica","garras","xmen","branco","vingador"]},
+  {nome:"Professor X", tags:["heroi","mutante","terra","marvel","telepatia","inteligente","estratega","lider","equipe-fixa","mentor","identidade-publica","xmen","cadeirante","branco","careca"]},
+  {nome:"Magneto", tags:["antiheroi","mutante","terra","marvel","telepatia","energia","estratega","lider","arma-signature","marca","sobrevive-extremo","liga-vilao","magnetismo","capa","branco","cabelo-branco"]},
+  {nome:"Tempestade", tags:["heroi","mutante","terra","marvel","energia","fogo","gelo","eletricidade","lider","equipe-fixa","identidade-publica","xmen","capa","negro","cabelo-branco","vingador"]},
+  {nome:"Ciclope", tags:["heroi","mutante","terra","marvel","energia","lider","equipe-fixa","identidade-publica","trauma","raio-ocular","xmen","branco"]},
+  {nome:"Jean Grey", tags:["heroi","mutante","terra","marvel","telepatia","energia","fusão","equipe-fixa","identidade-publica","trauma","precognicao","telecinese","xmen","branco","cabelo-ruivo"]},
+  {nome:"Cable", tags:["antiheroi","mutante","terra","marvel","forca","energia","teleporte","armas","trauma","equipe-fixa","marca","identidade-publica","braco-metal","branco","cabelo-branco","futuro","cibernetico"]},
+  {nome:"Deadpool", tags:["antiheroi","humano","terra","marvel","forca","regeneracao","agilidade","trauma","arma-signature","luta-signature","equipe-fixa","identidade-publica","humor","metamorfo","branco","espada","vingador","armas-fogo","mercenario","quebra-quarta-parede"]},
+  {nome:"Gambit", tags:["heroi","mutante","terra","marvel","energia","agilidade","armas","trauma","equipe-fixa","identidade-publica","luta-signature","xmen","branco","cartas"]},
+  {nome:"Rogue (Vampira Jovem)", tags:["heroi","mutante","terra","marvel","absorve-poderes","trauma","equipe-fixa","identidade-publica","emocional","xmen","branco","vingador"]},
+  {nome:"Bishop", tags:["heroi","mutante","terra","marvel","energia","combate","trauma","equipe-fixa","identidade-publica","viaagem-tempo","xmen","negro","futuro","absorve-poderes","armas-fogo"]},
+  {nome:"Psylocke", tags:["heroi","mutante","terra","marvel","telepatia","combate","artes-marciais","armas","trauma","equipe-fixa","identidade-publica","luta-signature","xmen","espada"]},
+  {nome:"Iceman", tags:["heroi","mutante","terra","marvel","gelo","energia","equipe-fixa","identidade-publica","trauma","xmen","branco"]},
+  {nome:"Angel", tags:["heroi","mutante","terra","marvel","voo-natural","agilidade","trauma","equipe-fixa","identidade-publica","xmen","branco","asas"]},
+  {nome:"Jubilee", tags:["heroi","mutante","terra","marvel","energia","jovem","equipe-fixa","identidade-publica","trauma","xmen"]},
+  {nome:"Raio Negro", tags:["heroi","humano","terra","marvel","energia","lider","equipe-fixa","identidade-publica","realeza","branco","inumanos"]},
+  {nome:"Medusa", tags:["heroi","humano","terra","marvel","agilidade","lider","equipe-fixa","identidade-publica","realeza","branco","cabelo-ruivo","inumanos"]},
+  {nome:"Karnak", tags:["heroi","humano","terra","marvel","artes-marciais","estratega","equipe-fixa","identidade-publica","realeza","inumanos"]},
+  {nome:"Gorgon", tags:["heroi","humano","terra","marvel","forca","trauma","equipe-fixa","identidade-publica","realeza","branco","inumanos"]},
+  {nome:"Crystal", tags:["heroi","humano","terra","marvel","energia","voo-natural","trauma","equipe-fixa","identidade-publica","realeza","branco","cabelo-ruivo","inumanos"]},
+  {nome:"Wiccano", tags:["heroi","humano","terra","marvel","magia","energia","jovem","equipe-fixa","identidade-publica","capa","branco"]},
+  {nome:"Célere (Speed)", tags:["heroi","humano","terra","marvel","velocidade","jovem","trauma","equipe-fixa","identidade-publica","branco"]},
+  {nome:"Patriota", tags:["heroi","humano","terra","marvel","forca","agilidade","lider","equipe-fixa","identidade-publica","bandeira-eua","negro","super-soldado"]},
+  {nome:"Estatura", tags:["heroi","humano","terra","marvel","forca","metamorfo","equipe-fixa","identidade-publica","branco","quarteto"]},
+  {nome:"Apocalipse", tags:["vilao","mutante","terra","marvel","forca","regeneracao","energia","fusão","divino","arma-signature","marca","sobrevive-extremo"]},
+  {nome:"Senhor Sinistro", tags:["vilao","mutante","terra","marvel","telepatia","energia","estratega","arma-signature","marca","sobrevive-extremo","juntou-viloes"]},
+  {nome:"Dentes-de-Sabre", tags:["vilao","mutante","terra","marvel","forca","regeneracao","trauma","combate","luta-signature","sobrevive-extremo","branco"]},
+  {nome:"Juggernaut", tags:["vilao","humano","terra","marvel","forca","imortal","trauma","sobrevive-extremo","arma-signature"]},
+  {nome:"Mystique", tags:["vilao","mutante","terra","marvel","metamorfo","trauma","arma-signature","luta-signature","sobrevive-extremo","juntou-viloes","pele-azul"]},
+  {nome:"Anciã", tags:["heroi","humano","terra","marvel","magia","estratega","precognicao","equipe-fixa","identidade-publica","careca"]},
+  {nome:"Cavaleiro da Lua", tags:["antiheroi","humano","terra","marvel","combate","armas","trauma","identidade-publica","luta-signature","arma-signature","capa","branco"]},
+  {nome:"Blade", tags:["antiheroi","humano","terra","marvel","forca","agilidade","trauma","combate","arma-signature","identidade-publica","sobrevive-extremo","vampiro","negro"]},
+  {nome:"Ghost Rider", tags:["antiheroi","humano","terra","marvel","forca","energia","fusão","trauma","arma-signature","marca","sobrevive-extremo","simbolo-caveira","fogo"]},
+  {nome:"Ego, o Planeta Vivo", tags:["vilao","cosmico","marvel","energia","entidade","divino","sobrevive-extremo"]},
+  {nome:"O Vigia (Uatu)", tags:["heroi","cosmico","marvel","entidade","precognicao","divino","sobrevive-extremo","careca"]},
+  {nome:"Hela", tags:["vilao","humano","terra","marvel","forca","magia","divino","trauma","marca","arma-signature","sobrevive-extremo","realeza","capa","branco","espada"]},
+  {nome:"Kang, o Conquistador", tags:["vilao","humano","terra","marvel","energia","estratega","marca","viaagem-tempo","sobrevive-extremo","juntou-viloes","negro","futuro"]},
+  {nome:"Spider-Gwen", tags:["heroi","humano","terra","marvel","agilidade","forca","trauma","equipe-fixa","identidade-publica","jovem","teia","aranhaverso","branco"]},
+  {nome:"Homem-Aranha 2099", tags:["heroi","humano","terra","marvel","agilidade","forca","trauma","identidade-publica","marca","arma-signature","teia","aranhaverso","futuro"]},
+  {nome:"Aranha Escarlate (Ben Reilly)", tags:["heroi","humano","terra","marvel","agilidade","forca","trauma","identidade-publica","marca","arma-signature","teia","aranhaverso","branco"]},
+  {nome:"Aranha de Ferro", tags:["heroi","humano","terra","marvel","agilidade","forca","traje-tech","arma-signature","marca","identidade-publica","trauma","teia","aranhaverso","armadura"]},
+  {nome:"Porco-Aranha", tags:["heroi","humano","terra","marvel","agilidade","forca","marca","trauma","identidade-publica","humor","teia","aranhaverso","animal-falante"]},
+  {nome:"Nick Fury", tags:["heroi","humano","terra","marvel","inteligente","estratega","lider","trauma","equipe-fixa","identidade-publica","negro","careca","tapa-olho","shield"]},
+  {nome:"Agatha Harkness", tags:["heroi","humano","terra","marvel","magia","precognicao","estratega","equipe-fixa","identidade-publica","branco"]},
+  {nome:"America Chavez", tags:["heroi","humano","terra","marvel","forca","voo-natural","teleporte","jovem","equipe-fixa","identidade-publica"]},
+  {nome:"Sentinela", tags:["heroi","synthetic","terra","marvel","forca","trauma","armas","sobrevive-extremo","equipe-fixa","branco"]},
+  {nome:"Cavaleiro Negro", tags:["heroi","humano","terra","marvel","forca","espada","trauma","equipe-fixa","identidade-publica","arma-signature","branco"]},
+  {nome:"Sr. Fantástico", tags:["heroi","humano","terra","marvel","inteligente","estratega","metamorfo","equipe-fixa","identidade-publica","branco","esticar","quarteto"]},
+  {nome:"Mulher Invisível", tags:["heroi","humano","terra","marvel","invisivel","telepatia","equipe-fixa","identidade-publica","branco","quarteto"]},
+  {nome:"Tocha Humana", tags:["heroi","humano","terra","marvel","fogo","voo-natural","equipe-fixa","identidade-publica","humor","branco","quarteto"]},
+  {nome:"Coisa", tags:["heroi","humano","terra","marvel","forca","trauma","equipe-fixa","identidade-publica","pele-pedra","quarteto"]},
+  {nome:"Cloak", tags:["heroi","humano","terra","marvel","teleporte","equipe-fixa","identidade-publica","capa","negro"]},
+  {nome:"Dagger", tags:["heroi","humano","terra","marvel","energia","agilidade","equipe-fixa","identidade-publica","branco"]},
+  {nome:"Echo", tags:["heroi","humano","terra","marvel","agilidade","artes-marciais","trauma","equipe-fixa","identidade-publica","luta-signature"]},
+  {nome:"Shang-Chi", tags:["heroi","humano","terra","marvel","artes-marciais","combate","agilidade","trauma","equipe-fixa","identidade-publica","luta-signature"]},
+  {nome:"Moon Girl", tags:["heroi","humano","terra","marvel","inteligente","estratega","jovem","equipe-fixa","identidade-publica"]},
+  {nome:"Noturno", tags:["heroi","mutante","terra","marvel","agilidade","teleporte","trauma","equipe-fixa","identidade-publica","xmen","pele-azul","cauda"]},
+  {nome:"Colossus", tags:["heroi","mutante","terra","marvel","forca","regeneracao","trauma","equipe-fixa","identidade-publica","xmen","pele-metal"]},
+  {nome:"Vampira", tags:["heroi","mutante","terra","marvel","absorve-poderes","trauma","equipe-fixa","identidade-publica","xmen"]},
+  {nome:"Fera", tags:["heroi","mutante","terra","marvel","agilidade","inteligente","estratega","trauma","equipe-fixa","identidade-publica","xmen","animal-monstro","pele-azul"]},
+  {nome:"Dominó", tags:["heroi","mutante","terra","marvel","agilidade","trauma","equipe-fixa","identidade-publica"]},
+  {nome:"Pyro", tags:["vilao","mutante","terra","marvel","fogo","trauma","armas","liga-vilao"]},
+  {nome:"Blob", tags:["vilao","mutante","terra","marvel","forca","trauma","arma-signature","sobrevive-extremo","liga-vilao"]},
+  {nome:"Dama Mortal", tags:["vilao","humano","terra","marvel","magia","combate","trauma","arma-signature","juntou-viloes","cibernetico"]},
+  {nome:"Omega Red", tags:["vilao","mutante","terra","marvel","forca","trauma","arma-signature","sobrevive-extremo","juntou-viloes","tentaculos"]},
+  {nome:"Yondu", tags:["antiheroi","alien","cosmico","marvel","armas","agilidade","trauma","equipe-fixa","identidade-publica","arma-signature","arco","pele-azul","guardioes"]},
+  {nome:"Nebula", tags:["antiheroi","alien","cosmico","marvel","trauma","arma-signature","sobrevive-extremo","juntou-viloes","pele-azul","braco-metal","cibernetico","careca","guardioes"]},
+  {nome:"Ronan, o Acusador", tags:["vilao","alien","cosmico","marvel","forca","energia","arma-signature","marca","divino","sobrevive-extremo","capa","pele-azul"]},
+  {nome:"Supreme Intelligence", tags:["vilao","cosmico","marvel","inteligente","estratega","energia","divino","sobrevive-extremo","alien"]},
+  {nome:"Mantis", tags:["heroi","alien","cosmico","marvel","telepatia","energia","agilidade","trauma","equipe-fixa","identidade-publica","guardioes"]},
+  {nome:"Phyla-Vell", tags:["heroi","humano","terra","marvel","energia","voo-natural","trauma","equipe-fixa","identidade-publica"]},
+  {nome:"Moondragon", tags:["heroi","humano","terra","marvel","telepatia","energia","magia","equipe-fixa","identidade-publica"]},
+  {nome:"Nova Prime (Richard Rider)", tags:["heroi","humano","terra","marvel","energia","voo-natural","trauma","equipe-fixa","identidade-publica","marca"]},
+  {nome:"Mephisto", tags:["vilao","cosmico","marvel","energia","magia","entidade","divino","fusão","sobrevive-extremo","pele-vermelha"]},
+  {nome:"Brother Voodoo", tags:["heroi","humano","terra","marvel","magia","energia","trauma","equipe-fixa","identidade-publica"]},
+  {nome:"Satana", tags:["vilao","humano","terra","marvel","magia","energia","trauma","arma-signature","juntou-viloes"]},
+  {nome:"Clea", tags:["heroi","humano","terra","marvel","magia","energia","equipe-fixa","identidade-publica"]},
+  {nome:"Kaecilius", tags:["vilao","humano","terra","marvel","magia","energia","trauma","arma-signature","juntou-viloes"]},
+  {nome:"Nightmare", tags:["vilao","cosmico","marvel","magia","energia","entidade","divino","sobrevive-extremo"]},
+  {nome:"War Machine", tags:["heroi","humano","terra","marvel","traje-tech","armas","forca","equipe-fixa","identidade-publica","marca","armadura"]},
+  {nome:"Ironheart", tags:["heroi","humano","terra","marvel","traje-tech","armas","inteligente","estratega","equipe-fixa","identidade-publica","armadura"]},
+  {nome:"Rescue", tags:["heroi","humano","terra","marvel","traje-tech","armas","inteligente","estratega","equipe-fixa","identidade-publica","armadura"]},
+  {nome:"Arnim Zola", tags:["vilao","synthetic","terra","marvel","inteligente","estratega","marca","juntou-viloes","sobrevive-extremo"]},
+  {nome:"MODOK", tags:["vilao","humano","terra","marvel","inteligente","energia","estratega","marca","juntou-viloes","sobrevive-extremo"]},
+  {nome:"O Tribunal Vivo", tags:["entidade","cosmico","marvel","divino","energia","sobrevive-extremo"]},
+  {nome:"America Chavez (Variante)", tags:["heroi","humano","terra","marvel","energia","voo-natural","teleporte","jovem","equipe-fixa","identidade-publica"]},
+  {nome:"Sersi", tags:["heroi","humano","terra","marvel","energia","magia","divino","equipe-fixa","identidade-publica"]},
+  {nome:"Ikaris", tags:["heroi","humano","terra","marvel","energia","voo-natural","divino","trauma","equipe-fixa","identidade-publica"]},
+  {nome:"Kingo", tags:["heroi","humano","terra","marvel","energia","divino","trauma","equipe-fixa","identidade-publica","arma-signature"]},
+  {nome:"Thena", tags:["heroi","humano","terra","marvel","forca","divino","trauma","equipe-fixa","identidade-publica","arma-signature"]},
+  {nome:"Druig", tags:["vilao","humano","terra","marvel","energia","trauma","equipe-fixa","identidade-publica","arma-signature","juntou-viloes"]},
+  {nome:"Capitã Marvel", tags:["heroi","humano","terra","marvel","energia","voo-natural","forca","trauma","equipe-fixa","identidade-publica","vingador"]},
+  {nome:"Star-Lord", tags:["heroi","humano","terra","marvel","agilidade","armas","trauma","equipe-fixa","identidade-publica","guardioes","vingador","alien"]},
+  {nome:"Drax, o Destruidor", tags:["heroi","alien","cosmico","marvel","forca","trauma","combate","equipe-fixa","identidade-publica","pele-verde","guardioes","vingador","careca"]},
+  {nome:"Gamora", tags:["heroi","alien","cosmico","marvel","forca","agilidade","trauma","combate","equipe-fixa","identidade-publica","pele-verde","guardioes","espada","vingador"]},
+  {nome:"Rocket", tags:["heroi","alien","cosmico","marvel","inteligente","estratega","armas","trauma","equipe-fixa","identidade-publica","guaxinim","animal-falante","guardioes","vingador","armas-fogo","cauda"]},
+  {nome:"Groot", tags:["heroi","alien","cosmico","marvel","forca","regeneracao","trauma","equipe-fixa","identidade-publica","arvore","guardioes","vingador"]},
+  {nome:"Loki", tags:["antiheroi","asgardiano","alien","marvel","magia","energia","divino","estratega","trauma","juntou-viloes","realeza","capa","chifres"]},
+  {nome:"Thanos", tags:["vilao","alien","cosmico","marvel","forca","energia","divino","estratega","trauma","marca","arma-signature","juntou-viloes","manopla","careca","pele-roxa"]},
+  {nome:"Ultron", tags:["vilao","synthetic","terra","marvel","inteligente","estratega","energia","arma-signature","marca","sobrevive-extremo","juntou-viloes","pele-metal","cibernetico"]},
+  {nome:"Galactus", tags:["vilao","cosmico","marvel","energia","entidade","divino","sobrevive-extremo"]},
+  {nome:"Dormammu", tags:["vilao","cosmico","marvel","magia","energia","entidade","divino","sobrevive-extremo"]},
+  {nome:"Duende Verde", tags:["vilao","humano","terra","marvel","tecnologia","instavel","alto","armas","trauma","marca","juntou-viloes","identidade-publica","aranhaverso","dupla-personalidade"]},
+  {nome:"Kraven, o Caçador", tags:["vilao","humano","terra","marvel","combate","armas","trauma","estratega","juntou-viloes","aranhaverso","mercenario"]},
+  {nome:"Abutre", tags:["vilao","humano","terra","marvel","voo","traje-tech","estratega","juntou-viloes","aranhaverso","asas"]},
+  {nome:"Lagarto", tags:["vilao","humano","terra","marvel","forca","regeneracao","metamorfo","juntou-viloes","aranhaverso","pele-verde"]},
+  {nome:"Senhor das Estrelas (Ego Jovem)", tags:["heroi","humano","terra","marvel","energia","voo-natural","trauma","equipe-fixa","identidade-publica"]},
+  {nome:"Doutor Octopus", tags:["vilao","humano","terra","marvel","inteligente","estratega","armas","trauma","marca","juntou-viloes","aranhaverso","tentaculos"]},
+  {nome:"Namor", tags:["antiheroi","mutante","terra","marvel","aquatico","realeza","voo-natural","forca","vingador","defensores","xmen","arma-signature","lanca","sunga"]},
+  {nome:"Colossus", tags:["heroi","mutante","terra","marvel","pele-metal","forca","xmen","deadpool-movie","russo","blindado","gentil"]},
+  {nome:"Noturno", tags:["heroi","mutante","terra","marvel","teleporte","pele-azul","cauda","xmen","espada","religioso","acrobata","agilidade"]},
+  {nome:"Falcão (Sam Wilson)", tags:["heroi","humano","terra","marvel","asas","voo","vingador","militar","lider","escudo","identidade-publica","negro"]},
+  {nome:"She-Hulk", tags:["heroi","humano","terra","marvel","pele-verde","forca","advogado","quebra-quarta-parede","vingador","defensores","inteligente","transformacao"]},
+  {nome:"Nebula", tags:["antiheroi","alien","cosmico","marvel","armas","combate","guardioes","cibernetico","espada","identidade-publica"]},
+  {nome:"Mantis", tags:["heroi","alien","cosmico","marvel","telepatia","guardioes","equipe-fixa","emocional","identidade-publica"]},
+  {nome:"Yondu", tags:["antiheroi","alien","cosmico","marvel","armas","estratega","guardioes","luta-signature","identidade-publica"]},
+  {nome:"Homem-Formiga (Scott Lang)", tags:["heroi","humano","terra","marvel","traje-tech","tamanho","vingador","identidade-publica","branco"]},
+  {nome:"Máquina de Combate", tags:["heroi","humano","terra","marvel","traje-tech","armadura","armas-fogo","militar","vingador","identidade-publica","negro"]},
+  {nome:"Ironheart (Riri Williams)", tags:["heroi","humano","terra","marvel","jovem","inteligente","traje-tech","armadura","tecnologia","identidade-publica"]},
+  {nome:"Rescue (Pepper Potts)", tags:["heroi","humano","terra","marvel","traje-tech","armadura","identidade-publica","branco"]},
+  {nome:"Emma Frost", tags:["antiheroi","mutante","terra","marvel","telepatia","pele-diamante","lider","xmen","branco","rico","clube-do-inferno"]},
+  {nome:"Kitty Pryde", tags:["heroi","mutante","terra","marvel","intangivel","inteligente","lider","xmen","branco","lockheed"]},
+  {nome:"Magik", tags:["heroi","mutante","terra","marvel","magia","teleporte","espada","xmen","branco","inferno","armadura"]},
+  {nome:"Taskmaster", tags:["vilao","humano","terra","marvel","copia-habilidades","armas","escudo","mercenario","luta-signature","identidade-publica","simbolo-caveira","branco"]},
+  {nome:"Gorr", tags:["vilao","alien","cosmico","marvel","matador-deuses","espada","capa","branco","simbionte","trauma"]},
+  {nome:"Hercules", tags:["heroi","divino","terra","marvel","forca","imortal","vingador","branco","olimpiano","briga"]},
+  {nome:"Silk", tags:["heroi","humano","terra","marvel","aranhaverso","teia","agilidade","teia-organica","identidade-publica","asiatico"]},
+  {nome:"Spider-Woman (Jessica Drew)", tags:["heroi","humano","terra","marvel","aranhaverso","voo","energia","espionagem","vingador","identidade-publica","branco"]},
+  {nome:"Black Cat", tags:["antiheroi","humano","terra","marvel","ladrao","agilidade","sorte","aranhaverso","branco","garras","identidade-publica"]},
+  {nome:"Annihilus", tags:["vilao","alien","cosmico","marvel","voo-natural","inseto","zona-negativa","lider","armadura","verde"]}
+]
+
+/* ===== PERGUNTAS ===== */
+const perguntas = [
+  {t:"É herói?",tag:"heroi"},
+  {t:"É vilão?",tag:"vilao"},
+  {t:"É um anti-herói?",tag:"antiheroi"},
+  {t:"É mutante?",tag:"mutante"},
+  {t:"É homem?",tag:"homem"},
+  {t:"É mulher?",tag:"mulher"},
+  {t:"Pertence aos X-Men?",tag:"xmen"},
+  {t:"É da Terra?",tag:"terra"},
+  {t:"É cósmico?",tag:"cosmico"},
+  {t:"É do Aranhaverso?",tag:"aranhaverso"},
+  {t:"Usa traje tecnológico?",tag:"traje-tech"},
+  {t:"Usa magia?",tag:"magia"},
+  {t:"Manipula energia?",tag:"energia"},
+  {t:"Voa?",tag:"voo"},
+  {t:"Tem regeneração?",tag:"regeneracao"},
+  {t:"Tem super velocidade?",tag:"velocidade"},
+  {t:"Teleporta?",tag:"teleporte"},
+  {t:"Tem poderes mentais?",tag:"telepatia"},
+  {t:"Luta corpo a corpo?",tag:"combate"},
+  {t:"Usa armas?",tag:"armas"},
+  {t:"É líder?",tag:"lider"},
+  {t:"Trabalha em equipe?",tag:"equipe"},
+  {t:"Identidade pública conhecida?",tag:"identidade-publica"},
+  {t:"Tem marca registrada?",tag:"marca"},
+  {t:"Sobrevive em ambientes extremos?",tag:"sobrevive-extremo"},
+  {t:"Usa teia?",tag:"teia"},
+  {t:"Empunha escudo?",tag:"escudo"},
+  {t:"Empunha martelo?",tag:"martelo"},
+  {t:"Dispara raio ocular?",tag:"raio-ocular"},
+  {t:"Controla magnetismo?",tag:"magnetismo"},
+  {t:"Usa garras retráteis?",tag:"garras"},
+  {t:"Usa prancha cósmica?",tag:"prancha"},
+  {t:"Usa armadura de combate?",tag:"armadura"},
+  {t:"É jovem?",tag:"jovem"},
+  {t:"É um gênio ou cientista?",tag:"inteligente"},
+  {t:"Tem aparência monstruosa?",tag:"animal-monstro"},
+  {t:"Pode mudar de forma?",tag:"metamorfo"},
+  {t:"É conhecido pelo humor?",tag:"humor"},
+  {t:"Tem super força?",tag:"forca"},
+  {t:"Tem agilidade sobre-humana?",tag:"agilidade"},
+  {t:"É um robô ou sintético?",tag:"synthetic"},
+  {t:"É um Deus?",tag:"divino"},
+  {t:"Usa arco e flecha?",tag:"arco"},
+  {t:"Usa capa?",tag:"capa"},
+  {t:"É da realeza?",tag:"realeza"},
+  {t:"Tem pele verde?",tag:"pele-verde"},
+  {t:"É cego?",tag:"cego"},
+  {t:"Usa cadeira de rodas?",tag:"cadeirante"},
+  {t:"Tem um braço de metal?",tag:"braco-metal"},
+  {t:"É uma árvore?",tag:"arvore"},
+  {t:"Parece um guaxinim?",tag:"guaxinim"},
+  {t:"É um simbionte?",tag:"simbionte"},
+  {t:"É vampiro ou caçador?",tag:"vampiro"},
+  {t:"Veste as cores da bandeira dos EUA?",tag:"bandeira-eua"},
+  {t:"Tem pele azul?",tag:"pele-azul"},
+  {t:"Tem pele vermelha?",tag:"pele-vermelha"},
+  {t:"Tem pele negra?",tag:"negro"},
+  {t:"Tem pele branca?",tag:"branco"},
+  {t:"É careca?",tag:"careca"},
+  {t:"Usa tapa-olho?",tag:"tapa-olho"},
+  {t:"Tem cabelo branco ou prateado?",tag:"cabelo-branco"},
+  {t:"Usa cartas como arma?",tag:"cartas"},
+  {t:"É um super soldado?",tag:"super-soldado"},
+  {t:"É de Wakanda?",tag:"wakanda"},
+  {t:"Veio do futuro?",tag:"futuro"},
+  {t:"É um animal falante?",tag:"animal-falante"},
+  {t:"Pode ficar invisível?",tag:"invisivel"},
+  {t:"Tem pele de pedra ou rochosa?",tag:"pele-pedra"},
+  {t:"Tem corpo metálico orgânico?",tag:"pele-metal"},
+  {t:"Usa o símbolo de uma caveira?",tag:"simbolo-caveira"},
+  {t:"Usa uma manopla ou luva poderosa?",tag:"manopla"},
+  {t:"Foi congelado no tempo?",tag:"congelado"},
+  {t:"Tem cabelo ruivo?",tag:"cabelo-ruivo"},
+  {t:"Usa tentáculos mecânicos ou orgânicos?",tag:"tentaculos"},
+  {t:"Controla o fogo?",tag:"fogo"},
+  {t:"Controla o gelo?",tag:"gelo"},
+  {t:"Controla a eletricidade?",tag:"eletricidade"},
+  {t:"Pode esticar o corpo?",tag:"esticar"},
+  {t:"Pode alterar seu tamanho (encolher/crescer)?",tag:"tamanho"},
+  {t:"Usa espada?",tag:"espada"},
+  {t:"Faz parte dos Guardiões da Galáxia?",tag:"guardioes"},
+  {t:"É agente da S.H.I.E.L.D.?",tag:"shield"},
+  {t:"É um Vingador?",tag:"vingador"},
+  {t:"Faz parte do Quarteto Fantástico?",tag:"quarteto"},
+  {t:"Faz parte dos Defensores?",tag:"defensores"},
+  {t:"É um Eterno?",tag:"eterno"},
+  {t:"É um Inumano?",tag:"inumanos"},
+  {t:"É da Hydra?",tag:"hydra"},
+  {t:"É Asgardiano?",tag:"asgardiano"},
+  {t:"É um alienígena?",tag:"alien"},
+  {t:"Absorve poderes?",tag:"absorve-poderes"},
+  {t:"Controla o tempo?",tag:"tempo"},
+  {t:"Pode ficar intangível?",tag:"intangivel"},
+  {t:"Usa armas de fogo?",tag:"armas-fogo"},
+  {t:"Tem chifres ou capacete com chifres?",tag:"chifres"},
+  {t:"Tem cauda?",tag:"cauda"},
+  {t:"Tem pele roxa?",tag:"pele-roxa"},
+  {t:"Tem asas?",tag:"asas"},
+  {t:"Vive na água ou é de Atlântida?",tag:"aquatico"},
+  {t:"É mestre em artes marciais?",tag:"artes-marciais"},
+  {t:"É um mercenário?",tag:"mercenario"},
+  {t:"Tem dupla personalidade ou múltiplas identidades?",tag:"dupla-personalidade"},
+  {t:"É advogado?",tag:"advogado"},
+  {t:"Quebra a quarta parede?",tag:"quebra-quarta-parede"},
+  {t:"Tem telecinese?",tag:"telecinese"},
+  {t:"É cibernético?",tag:"cibernetico"},
+  {t:"É militar?",tag:"militar"},
+  {t:"Usa vibranium?",tag:"vibranium"},
+  {t:"Usa laser?",tag:"laser"},
+  {t:"Usa arma icônica?",tag:"arma-signature"},
+  {t:"É religioso?",tag:"religioso"},
+  {t:"Tem pele de diamante?",tag:"pele-diamante"},
+  {t:"Copia habilidades ou movimentos?",tag:"copia-habilidades"},
+  {t:"Traz má sorte ou manipula probabilidades?",tag:"sorte"},
+  {t:"É um ladrão ou ladra?",tag:"ladrao"},
+  {t:"É um matador de deuses?",tag:"matador-deuses"},
+  {t:"Tem um dragão de estimação?",tag:"lockheed"},
+  {t:"Governa a Zona Negativa?",tag:"zona-negativa"}
+]
+const perguntasDedup = Array.from(new Map(perguntas.map(p=>[p.tag,p])).values());
+
+/* ===== LÓGICA ===== */
+let candidatos = [];
+let usadas = [];
+let atual = null;
+let historico = [];
+const stats = new Map();
+const MIN_QUESTIONS_BEFORE_GUESS = 20;
+const CONTRADICTION_TOLERANCE = 1;
+const YES_WEIGHT = 1.0;
+const MISS_YES_PENALTY = 0.5;
+const NO_PENALTY = 1.0;
+const AVOID_NO_REWARD = 0.25;
+const CONF_MARGIN = 6.0;
+const MUST_ASK = ["heroi","vilao","antiheroi","homem","mulher","xmen","aranhaverso","terra","cosmico"];
+let mustAskOrder = [];
+let continueMode = false;
+let lastGuess = null;
+const CONTINUE_MIN_QUESTIONS = 10;
+let continueStartCount = 0;
+let baseCandidatos = [];
+let ativos = [];
+let yesTags = [];
+let noTags = [];
+let cycles = 0;
+
+const q = document.getElementById("pergunta");
+const r = document.getElementById("resultado");
+const progressoInner = document.getElementById("progresso-inner");
+const personagemImg = document.getElementById("personagem-img");
+
+document.getElementById("sim").onclick = ()=>responder(1);
+document.getElementById("talvez").onclick = ()=>responder(0.5);
+document.getElementById("nao").onclick = ()=>responder(0);
+document.getElementById("nao-sei").onclick = ()=>pular();
+
+function contradicoes(c){
+  const missYes = yesTags.filter(t=>!c.tags.includes(t)).length;
+  const hasNo = noTags.filter(t=>c.tags.includes(t)).length;
+  return missYes + hasNo;
+}
+
+function iniciarJogo() {
+  function shuffle(a){ return a.map(x=>({x, r:Math.random()})).sort((u,v)=>u.r-v.r).map(o=>o.x); }
+  function dedupePersonagens(list){
+    const map = new Map();
+    list.forEach(p=>{
+      const key = (p.nome||"").trim().toLowerCase();
+      const existing = map.get(key);
+      if(!existing){
+        map.set(key, {...p, tags: Array.from(new Set(p.tags||[]))});
+      }else{
+        const mergedTags = Array.from(new Set([...(existing.tags||[]), ...(p.tags||[])]));
+        map.set(key, {...existing, tags: mergedTags, img: existing.img || p.img});
+      }
+    });
+    return Array.from(map.values());
+  }
+  function expandTags(p){
+    const s = new Set(p.tags || []);
+    if(s.has("traje-tech")) s.add("tecnologia");
+    if(s.has("voo-natural")) s.add("voo");
+    if(s.has("equipe-fixa")) s.add("equipe");
+    if(s.has("artes-marciais")) s.add("combate");
+    if(s.has("cibernetico") || s.has("synthetic")) s.add("tecnologia");
+    const nome = (p.nome||"").toLowerCase();
+    const mulheres = new Set([
+      "viúva negra","wanda maximoff","scarlet witch","hawkeye (kate bishop)","ms. marvel (kamala khan)","shuri","okoye","wasp (janet van dyne)","christine palmer","spider-gwen","jessica jones","rogue (vampira jovem)","psylocke","jubilee","medusa","crystal","agatha harkness","america chavez","ironheart","rescue","clea","satana","hela","mulher invisível","echo","dagger","estatura","thena","sersi","nebula","gamora","she-hulk","emma frost","kitty pryde","shadowcat","magik","illyana rasputin","silk","cindy moon","spider-woman","jessica drew","black cat","felicia hardy"
+    ]);
+    if(!s.has("mulher") && !s.has("homem")){
+      if(mulheres.has(nome)) s.add("mulher");
+      else s.add("homem");
+    }
+    return Array.from(s);
+  }
+  const completos = dedupePersonagens(personagens);
+  baseCandidatos = completos.map(p=>({...p,tags:expandTags(p)}));
+  candidatos = baseCandidatos.map(p=>({...p,pontos:0}));
+  ativos = candidatos.slice();
+  usadas = [];
+  historico = [];
+  yesTags = [];
+  noTags = [];
+  cycles = 0;
+  continueMode = false;
+  lastGuess = null;
+  continueStartCount = 0;
+  mustAskOrder = shuffle(MUST_ASK.slice());
+  r.innerHTML="";
+  personagemImg.style.display = "none";
+  atualizarProgresso();
+  proxima();
+  ativar();
+}
+
+function escolherPergunta() {
+  const base = ativos.length ? ativos : candidatos;
+  const unused = perguntasDedup.filter(p=>!usadas.includes(p.tag));
+  const order = mustAskOrder.length ? mustAskOrder : MUST_ASK;
+  for (const tag of order) {
+    if (unused.some(p=>p.tag===tag) && base.some(c=>c.tags.includes(tag))) {
+      const pa = perguntasDedup.find(p=>p.tag===tag);
+      if (pa) return pa;
+    }
+  }
+  const elegiveis = unused.filter(p =>
+    base.some(c=>c.tags.includes(p.tag))
+  );
+  const pool = elegiveis.length ? elegiveis : unused;
+  if (!pool.length) return null;
+  const total = base.length || candidatos.length;
+  let melhor = null;
+  let melhorScore = -1;
+  const last = historico[historico.length-1];
+  const ref = elegiveis.length ? base : candidatos;
+  pool.forEach(p=>{
+    const pos = ref.filter(c=>c.tags.includes(p.tag)).length;
+    const neg = (elegiveis.length ? total : ref.length) - pos;
+    const balance = Math.min(pos,neg) / (total || 1);
+    const top = ref.slice(0, Math.min(5, ref.length));
+    const topPos = top.filter(c=>c.tags.includes(p.tag)).length;
+    const topNeg = top.length - topPos;
+    const topBalance = Math.min(topPos, topNeg) / (top.length || 1);
+    const st = stats.get(p.tag) || {asked:0,yes:0,no:0};
+    const hist = st.asked ? Math.min(st.yes, st.no) / st.asked : 0;
+    let score = (0.7 * balance) + (0.3 * topBalance) + (0.05 * hist);
+    if(last && last.v===1){
+      const coTop = top.filter(c=>c.tags.includes(last.tag) && c.tags.includes(p.tag)).length;
+      const coBoost = coTop ? 0.1 : 0;
+      score += coBoost;
+    }
+    score += Math.random() * 0.02;
+    if(score > melhorScore){
+      melhorScore = score;
+      melhor = p;
+    }
+  });
+  return melhor;
+}
+
+function proxima() {
+  atual = escolherPergunta();
+  if (!atual) {
+    const unused = perguntasDedup.filter(p=>!usadas.includes(p.tag));
+    if (unused.length) {
+      const byAskedUnused = unused.slice().sort((a,b)=> (stats.get(a.tag)?.asked||0) - (stats.get(b.tag)?.asked||0));
+      const recent = new Set(historico.slice(-3).map(h=>h.tag));
+      const pool = byAskedUnused.filter(p=>!recent.has(p.tag));
+      if (pool.length) {
+        atual = pool[Math.floor(Math.random()*pool.length)];
+      } else {
+        atual = byAskedUnused[Math.floor(Math.random()*byAskedUnused.length)] || null;
+      }
+    } else if (continueMode) {
+      const ref = ativos.length ? ativos : candidatos;
+      const candidato = ref.find(c=>c.nome!==lastGuess) || ref[0];
+      const recent = new Set(historico.slice(-3).map(h=>h.tag));
+      const answered = new Map();
+      for(let i=historico.length-1;i>=0;i--){
+        const h = historico[i];
+        if(!answered.has(h.tag)) answered.set(h.tag, h.v);
+      }
+      // 1) Confirmar tags incertas do candidato atual
+      let confirmPool = perguntasDedup.filter(p=>
+        usadas.includes(p.tag) &&
+        candidato && candidato.tags.includes(p.tag) &&
+        (!answered.has(p.tag) || answered.get(p.tag)===0.5 || answered.get(p.tag)==null)
+      ).filter(p=>!recent.has(p.tag));
+      // 2) Se vazio, confirmar possíveis contradições (respostas "não" para tags presentes no candidato)
+      if(!confirmPool.length){
+        confirmPool = perguntasDedup.filter(p=>
+          usadas.includes(p.tag) &&
+          candidato && candidato.tags.includes(p.tag) &&
+          answered.get(p.tag)===0
+        ).filter(p=>!recent.has(p.tag));
+      }
+      // 3) Se ainda vazio, tentar tags que diferenciam topo e segundo colocado e que estejam incertas
+      if(!confirmPool.length){
+        const topo = ref[0], segundo = ref[1];
+        const diffTags = new Set();
+        if(topo && segundo){
+          topo.tags.forEach(t=>{ if(!segundo.tags.includes(t)) diffTags.add(t); });
+          segundo?.tags.forEach(t=>{ if(!topo.tags.includes(t)) diffTags.add(t); });
+        }
+        confirmPool = perguntasDedup.filter(p=>
+          usadas.includes(p.tag) &&
+          diffTags.has(p.tag) &&
+          (!answered.has(p.tag) || answered.get(p.tag)===0.5 || answered.get(p.tag)==null)
+        ).filter(p=>!recent.has(p.tag));
+      }
+      // 4) Escolher pergunta de confirmação, se existir
+      if(confirmPool.length){
+        atual = confirmPool[Math.floor(Math.random()*confirmPool.length)];
+      } else {
+        return finalizar();
+      }
+    } else {
+      return finalizar();
+    }
+  }
+  if (!atual) return finalizar();
+  q.textContent = atual.t;
+  atualizarProgresso();
+}
+
+function responder(v) {
+  usadas.push(atual.tag);
+  if (atual.tag==="homem" && !usadas.includes("mulher")) usadas.push("mulher");
+  if (atual.tag==="mulher" && !usadas.includes("homem")) usadas.push("homem");
+  historico.push({tag: atual.tag, v});
+  const st = stats.get(atual.tag) || {asked:0,yes:0,no:0};
+  st.asked++;
+  if(v===1) st.yes++;
+  else if(v===0) st.no++;
+  stats.set(atual.tag, st);
+  if(v===1) yesTags.push(atual.tag);
+  else if(v===0) noTags.push(atual.tag);
+  if(atual.tag==="homem"){
+    if(v===1){ if(!noTags.includes("mulher")) noTags.push("mulher"); }
+    else if(v===0){ if(!yesTags.includes("mulher")) yesTags.push("mulher"); }
+  }
+  if(atual.tag==="mulher"){
+    if(v===1){ if(!noTags.includes("homem")) noTags.push("homem"); }
+    else if(v===0){ if(!yesTags.includes("homem")) yesTags.push("homem"); }
+  }
+  ativos = candidatos.filter(c=>{
+    const hasAllYes = yesTags.every(t=>c.tags.includes(t));
+    const hasNo = noTags.some(t=>c.tags.includes(t));
+    return hasAllYes && !hasNo && (contradicoes(c) <= CONTRADICTION_TOLERANCE);
+  });
+  if(ativos.length===0){
+    ativos = candidatos.filter(c=>contradicoes(c) <= CONTRADICTION_TOLERANCE);
+    if(ativos.length===0) ativos = candidatos.slice();
+  }
+  candidatos.forEach(c=>{
+    const temTag = c.tags.includes(atual.tag);
+    if(v===1){
+      c.pontos += temTag ? YES_WEIGHT : -MISS_YES_PENALTY;
+    } else if(v===0){
+      c.pontos += temTag ? -NO_PENALTY : AVOID_NO_REWARD;
+    } else {
+      c.pontos += temTag ? (YES_WEIGHT * 0.25) : (-MISS_YES_PENALTY * 0.2);
+    }
+  });
+  candidatos.sort((a,b)=>b.pontos-a.pontos);
+  ativos.sort((a,b)=>b.pontos-a.pontos);
+  const margemAtivos = ((ativos[0]?.pontos)||0) - ((ativos[1]?.pontos)||0);
+  const margemCandidatos = ((candidatos[0]?.pontos)||0) - ((candidatos[1]?.pontos)||0);
+  const certoUnico = usadosComMinimo() && ativos.length===1 && (contradicoes(ativos[0])<=CONTRADICTION_TOLERANCE);
+  const certoMargem = usadosComMinimo() && ((ativos.length>=2 && margemAtivos>=CONF_MARGIN) || (ativos.length===0 && margemCandidatos>=CONF_MARGIN));
+  const topAtual = ativos[0] || candidatos[0];
+  const diferente = !continueMode || (topAtual && topAtual.nome !== lastGuess);
+  const semPerguntas = perguntasDedup.every(p=>usadas.includes(p.tag));
+  const minimoContinuarOk = continueMode ? ((historico.length - continueStartCount) >= CONTINUE_MIN_QUESTIONS) : true;
+  if(((certoUnico || certoMargem) && minimoContinuarOk) || (continueMode && semPerguntas && minimoContinuarOk)){
+    if(diferente) finalizar(); else proxima();
+  }
+  else proxima();
+}
+
+function usadosComMinimo(){
+  return (new Set(usadas)).size >= MIN_QUESTIONS_BEFORE_GUESS;
+}
+
+function pular(){
+  usadas.push(atual.tag);
+  historico.push({tag: atual.tag, v: null});
+  proxima();
+}
+
+function finalizar() {
+  desativar();
+  const pool = ativos.length ? ativos : candidatos;
+  let escolhido = continueMode ? (pool.find(c=>c.nome !== lastGuess) || pool[0]) : pool[0];
+  lastGuess = escolhido?.nome || null;
+  personagemImg.src = escolhido.img || "images.jpg";
+  personagemImg.style.display = "block";
+
+  let html = `Resposta:<br><b>${escolhido.nome}</b><br><br>`;
+  html += "Alternativas:<br>";
+  for(let i=1;i<Math.min(4,ativos.length);i++){
+    html += `• ${ativos[i].nome}<br>`;
+  }
+  html += `<br>Acertei?<br>`;
+  html += `<button id="acertou-sim" style="padding:10px 20px;font-size:16px;background:#2ecc71;color:white;border:none;border-radius:10px;cursor:pointer;margin-right:10px;">Sim</button>`;
+  html += `<button id="acertou-nao" style="padding:10px 20px;font-size:16px;background:#e74c3c;color:white;border:none;border-radius:10px;cursor:pointer;">Não</button>`;
+ 
+  q.textContent="Acertei?";
+  r.innerHTML=html;
+  const btnSim = document.getElementById("acertou-sim");
+  const btnNao = document.getElementById("acertou-nao");
+  btnSim.onclick = iniciarJogo;
+  btnNao.onclick = ()=>{
+    r.innerHTML = `Deseja continuar?<br>
+    <button id="continuar" style="padding:10px 20px;font-size:16px;background:#3498db;color:white;border:none;border-radius:10px;cursor:pointer;margin-right:10px;">Continuar</button>
+    <button id="reiniciar2" style="padding:10px 20px;font-size:16px;background:#e62429;color:white;border:none;border-radius:10px;cursor:pointer;">Reiniciar</button>`;
+    const cBtn = document.getElementById("continuar");
+    const rBtn = document.getElementById("reiniciar2");
+    cBtn.onclick = ()=>{
+      continueMode = true;
+      continueStartCount = historico.length;
+      r.innerHTML = "";
+      personagemImg.style.display = "none";
+      ativar();
+      proxima();
+    };
+    rBtn.onclick = iniciarJogo;
+  };
+ 
+  atualizarProgresso();
+}
+
+function ativar(){["sim","talvez","nao","nao-sei","voltar"].forEach(id=>document.getElementById(id).disabled=false);}
+function desativar(){["sim","talvez","nao","nao-sei","voltar"].forEach(id=>document.getElementById(id).disabled=true);}
+desativar();
+
+function atualizarProgresso(final=false){
+  let pct = final ? 100 : (usadas.length / perguntasDedup.length) * 100;
+  progressoInner.style.width = pct+"%";
+}
+
+// Botão reiniciar
+document.getElementById("reiniciar").onclick = iniciarJogo;
+
+// Botão voltar para a pergunta anterior
+document.getElementById("voltar").onclick = ()=> {
+  if(historico.length === 0) return;
+  const h = historico.pop();
+
+  // Reverter stats
+  const st = stats.get(h.tag);
+  if(st){
+    if(st.asked>0) st.asked--;
+    if(h.v===1 && st.yes>0) st.yes--;
+    if(h.v===0 && st.no>0) st.no--;
+    stats.set(h.tag, st);
+  }
+
+  // Restaurar pergunta
+  const prevQ = perguntasDedup.find(p=>p.tag === h.tag);
+  if(prevQ) atual = prevQ;
+  q.textContent = atual.t;
+
+  // Reconstruir estado
+  usadas = [];
+  yesTags = [];
+  noTags = [];
+  candidatos.forEach(c=>c.pontos=0);
+
+  for(const step of historico){
+    usadas.push(step.tag);
+    if(step.tag==="homem" && !usadas.includes("mulher")) usadas.push("mulher");
+    if(step.tag==="mulher" && !usadas.includes("homem")) usadas.push("homem");
+
+    if(step.v === null) continue;
+
+    if(step.v===1) yesTags.push(step.tag);
+    else if(step.v===0) noTags.push(step.tag);
+
+    if(step.tag==="homem"){
+      if(step.v===1){ if(!noTags.includes("mulher")) noTags.push("mulher"); }
+      else if(step.v===0){ if(!yesTags.includes("mulher")) yesTags.push("mulher"); }
+    }
+    if(step.tag==="mulher"){
+      if(step.v===1){ if(!noTags.includes("homem")) noTags.push("homem"); }
+      else if(step.v===0){ if(!yesTags.includes("homem")) yesTags.push("homem"); }
+    }
+
+    candidatos.forEach(c=>{
+      const temTag = c.tags.includes(step.tag);
+      if(step.v===1){
+        c.pontos += temTag ? YES_WEIGHT : -MISS_YES_PENALTY;
+      } else if(step.v===0){
+        c.pontos += temTag ? -NO_PENALTY : AVOID_NO_REWARD;
+      } else {
+        c.pontos += temTag ? (YES_WEIGHT * 0.25) : (-MISS_YES_PENALTY * 0.2);
+      }
+    });
+  }
+
+  ativos = candidatos.filter(c=>{
+    const hasAllYes = yesTags.every(t=>c.tags.includes(t));
+    const hasNo = noTags.some(t=>c.tags.includes(t));
+    return hasAllYes && !hasNo && (contradicoes(c) <= CONTRADICTION_TOLERANCE);
+  });
+  if(ativos.length===0){
+    ativos = candidatos.filter(c=>contradicoes(c) <= CONTRADICTION_TOLERANCE);
+    if(ativos.length===0) ativos = candidatos.slice();
+  }
+
+  candidatos.sort((a,b)=>b.pontos-a.pontos);
+  ativos.sort((a,b)=>b.pontos-a.pontos);
+
+  atualizarProgresso();
+  ativar();
+  r.innerHTML = "";
+  personagemImg.style.display = "none";
+};
+
+// Inicia o jogo automaticamente
+window.onload = iniciarJogo;
+
+</script>
+
+</body>
+</html>
